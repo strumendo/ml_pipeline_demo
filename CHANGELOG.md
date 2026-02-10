@@ -1,38 +1,43 @@
 # Changelog - DemoML Pipeline
 
-Todas as alteracoes notaveis deste projeto serao documentadas neste arquivo.
+Todas as alterações notáveis deste projeto serão documentadas neste arquivo.
 
 ## [1.0.0] - 2026-02-06
 
 ### Adicionado
 
 #### Pipeline Completo de ML
-- Pipeline de 6 etapas para manutencao prescritiva
-- Coleta e integracao de dados de multiplos equipamentos
-- Pre-processamento com engenharia de features
-- Analise exploratoria (EDA) basica e avancada
+
+- Pipeline de 6 etapas para manutenção prescritiva
+- Coleta e integração de dados de múltiplos equipamentos
+- Pré-processamento com engenharia de features
+- Análise exploratória (EDA) básica e avançada
 - Modelagem com 4 algoritmos (Linear, Decision Tree, Random Forest, XGBoost)
-- Avaliacao e selecao automatica do melhor modelo
-- Geracao de relatorio PDF com previsoes
+- Avaliação e seleção automática do melhor modelo
+- Geração de relatório PDF com previsões
 
-#### Previsao Prescritiva com Modelo ML
-- Tabela de previsao historica (baseada em intervalos)
-- Tabela de previsao prescritiva (baseada no modelo ML)
-- Comparacao entre metodos (Historico vs ML)
-- Recomendacoes automaticas: "Antecipar", "Pode adiar", "Conforme"
+#### Previsão Prescritiva com Modelo ML
 
-#### Automacao
-- Deteccao automatica de alteracoes usando hash MD5
-- Modo watch para monitoramento continuo
-- Re-execucao automatica do pipeline
+- Tabela de previsão histórica (baseada em intervalos)
+- Tabela de previsão prescritiva (baseada no modelo ML)
+- Comparação entre métodos (Histórico vs ML)
+- Recomendações automáticas: "Antecipar", "Pode adiar", "Conforme"
+
+#### Automação
+
+- Detecção automática de alterações usando hash MD5
+- Modo watch para monitoramento contínuo
+- Reexecução automática do pipeline
 
 #### Dados Dummy
-- Script de geracao de dados sinteticos
-- 10 equipamentos demo (EQ-101 a EQ-110)
-- Dados de producao e manutencao simulados
 
-#### Graficos
-- Matriz de correlacao completa
+- Script de geração de dados sintéticos
+- 10 equipamentos demo (EQ-101 a EQ-110)
+- Dados de produção e manutenção simulados
+
+#### Gráficos
+
+- Matriz de correlação completa
 - Scatter plots coloridos por equipamento
 - Resumo visual por equipamento
-- Analise temporal e matriz de urgencia
+- Análise temporal e matriz de urgência
