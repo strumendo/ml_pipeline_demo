@@ -87,11 +87,12 @@ def prepare_features_target(df: pd.DataFrame, target_col: str = "Manutencao") ->
         feature_cols = [col for col in feature_cols if col not in cols_to_remove]
         print(f"  ⚠ Removidas {len(cols_to_remove)} colunas vazias/unnamed: {cols_to_remove}")
 
-    # CORREÇÃO: Remover features com data leakage
-    # intervalo_manutencao correlaciona ~1.0 com target (causa overfitting)
-    # Estas features vazam informação do target para o modelo
+    # CORREÇÃO §7.1 (GUIA_REPLICACAO): features com data leakage
+    # Derivadas diretas do target ou colineares ~1.0 com ele.
     leaky_features = [
-        "intervalo_manutencao",  # Intervalo fixo por equipamento = target direto
+        "intervalo_manutencao",          # Intervalo fixo por equip = target direto
+        "taxa_desgaste_componente_a",    # = desgaste / intervalo_manutencao
+        "taxa_desgaste_componente_b",    # = desgaste / intervalo_manutencao
     ]
     removed_features = []
     for leaky in leaky_features:
@@ -101,6 +102,31 @@ def prepare_features_target(df: pd.DataFrame, target_col: str = "Manutencao") ->
 
     if removed_features:
         print(f"  ⚠ Removidas {len(removed_features)} features com data leakage: {removed_features}")
+
+    # CORREÇÃO §7.2 (GUIA_REPLICACAO): features constantes por equipamento são
+    # colineares com OHE de Equipamento — só ruído de coeficiente.
+    # Removidas APENAS se o OHE de Equipamento estiver presente (evita
+    # destruir sinal quando o pipeline rodar sem encoding por equip).
+    has_equip_ohe = any(c.startswith("Equipamento_") for c in df.columns)
+    equipment_constant_features = [
+        "componente_a_p1", "componente_a_p2", "componente_a_p3",
+        "componente_a_p4", "componente_a_p5",
+        "componente_a_max", "componente_a_min", "componente_a_variacao",
+        "desgaste_componente_a",
+        "componente_b_p1", "componente_b_p2", "componente_b_p3", "componente_b_p4",
+        "componente_b_max", "componente_b_min", "componente_b_variacao",
+        "desgaste_componente_b",
+        "indice_desgaste",
+    ]
+    removed_constants = []
+    if has_equip_ohe:
+        for feat in equipment_constant_features:
+            if feat in feature_cols:
+                feature_cols.remove(feat)
+                removed_constants.append(feat)
+
+    if removed_constants:
+        print(f"  ⚠ Removidas {len(removed_constants)} features colineares com OHE de Equipamento: {removed_constants}")
 
     X = df[feature_cols].values
     y = df[target_col].values

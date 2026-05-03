@@ -73,20 +73,25 @@ def get_maintenance_file() -> Path:
     """
     Retorna o caminho do arquivo de manutenção mais recente.
 
-    Procura arquivos no padrão "Dados Manut*.xlsx" na pasta data/manutencao/
+    Procura arquivos nos padrões "Dados Manut*.xlsx" (legado) ou
+    "dados_manutencao*.xlsx" (gerado pelo dummy) em data/manutencao/
     ou data/ (fallback).
 
     Returns:
         Path do arquivo ou None se não encontrado
     """
-    # Primeiro, procurar na nova pasta data/manutencao/
+    patterns = ("Dados Manut*.xlsx", "dados_manutencao*.xlsx")
+
     if DATA_MANUTENCAO_DIR.exists():
-        maint_files = list(DATA_MANUTENCAO_DIR.glob("Dados Manut*.xlsx"))
+        maint_files = []
+        for pat in patterns:
+            maint_files.extend(DATA_MANUTENCAO_DIR.glob(pat))
         if maint_files:
             return max(maint_files, key=lambda f: f.stat().st_mtime)
 
-    # Fallback para pasta data/ (compatibilidade)
-    maint_files = list(DATA_DIR.glob("Dados Manut*.xlsx"))
+    maint_files = []
+    for pat in patterns:
+        maint_files.extend(DATA_DIR.glob(pat))
     if maint_files:
         return max(maint_files, key=lambda f: f.stat().st_mtime)
 
@@ -123,7 +128,8 @@ def get_all_maintenance_files() -> dict:
         files["csv"] = sorted(DATA_MANUTENCAO_DIR.glob("*.csv"))
 
     # Incluir arquivos da pasta data/ (compatibilidade)
-    files["xlsx"].extend(list(DATA_DIR.glob("Dados Manut*.xlsx")))
+    for pat in ("Dados Manut*.xlsx", "dados_manutencao*.xlsx"):
+        files["xlsx"].extend(list(DATA_DIR.glob(pat)))
 
     return files
 
