@@ -104,7 +104,7 @@ def scan_data_files() -> dict:
 
     # Escanear arquivos na pasta raw (EQ-*.xlsx, DadosProducao*.xlsx)
     if DATA_RAW_DIR.exists():
-        patterns = ["EQ-*.xlsx", "EQ-*.csv", "DadosProducao*.xlsx"]
+        patterns = ["EQ-*.xlsx", "EQ-*.csv", "DadosProducao*.xlsx", "DadosProducao*.csv"]
         for pattern in patterns:
             for filepath in DATA_RAW_DIR.glob(pattern):
                 files_info["raw_files"][filepath.name] = get_file_info(filepath)

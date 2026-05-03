@@ -3,7 +3,7 @@ DemoML - Pipeline Principal de Machine Learning
 ==============================================
 Pipeline estruturado conforme fluxos.drawio
 
-FLUXO DO PIPELINE (6 ETAPAS):
+FLUXO DO PIPELINE (10 ETAPAS — núcleo 1-5 obrigatório, demais opcionais):
 ┌─────────────────────────────────────────────────────────────────┐
 │  ETAPA 1: COLETA E INTEGRAÇÃO                                   │
 │  CSV Files (EQ-101, EQ-102, EQ-103...) → DataFrame Único        │
@@ -124,6 +124,38 @@ PIPELINE_STEPS = {
         "color": "verde",
         "inputs": ["best_model.joblib", "evaluation_report.txt", "eda_plots/"],
         "outputs": ["Report_DemoML_RX.pdf"],
+        "optional": True,
+    },
+    7: {
+        "name": "s07_cross_reference",
+        "title": "Cruzamentos histórico × produção",
+        "description": "Histórico completo, recente, janelas e ociosidade",
+        "color": "ciano",
+        "inputs": ["data/raw/EQ-*.csv", "data/manutencao/*.xlsx"],
+        "outputs": ["historico_completo.csv", "historico_recente.csv",
+                    "janelas_operacao.csv", "ociosidade.csv"],
+        "optional": True,
+    },
+    8: {
+        "name": "s08_prescription",
+        "title": "Prescrição da Próxima Manutenção",
+        "description": "Fórmula T_base × fator_desgaste × fator_massa + clamps",
+        "color": "magenta",
+        "inputs": ["historico_recente.csv", "janelas_operacao.csv", "ociosidade.csv"],
+        "outputs": ["prescricao_manutencao.csv"],
+        "optional": True,
+    },
+    9: {
+        "name": "s09_monthly_component_reports",
+        "title": "Relatórios mensais por componente",
+        "description": "Gera EQ-*.md e EQ-*.pptx + apresentação consolidada",
+        "color": "teal",
+        "inputs": ["data/raw/EQ-*.csv", "historico_completo.csv", "prescricao_manutencao.csv"],
+        "outputs": ["relatorios_mensais_componentes/EQ-*.md",
+                    "relatorios_mensais_componentes_ppt/EQ-*.pptx",
+                    "relatorios_mensais_componentes_ppt/Apresentacao_Consolidada.pptx",
+                    "relatorios_mensais_componentes_ppt/relatorio_mensal_por_componente.zip"],
+        "optional": True,
     },
 }
 
@@ -302,8 +334,8 @@ def run_full_pipeline(save_history: bool = True, inicio: str = None, fim: str = 
     results = {}
 
     try:
-        # Executar as etapas em sequência (0, 1, 2, 3, 3b, 4, 5, 6)
-        steps_order = [0, 1, 2, 3, "3b", 4, 5, 6]
+        # Executar as etapas em sequência (0, 1, 2, 3, 3b, 4, 5, 6, 7, 8, 9)
+        steps_order = [0, 1, 2, 3, "3b", 4, 5, 6, 7, 8, 9]
 
         for step in steps_order:
             step_info = PIPELINE_STEPS.get(step, {})
@@ -392,8 +424,8 @@ Etapas do Pipeline (fluxos.drawio):
     parser.add_argument(
         "--step",
         type=str,
-        choices=["0", "1", "2", "3", "3b", "4", "5", "6"],
-        help="Executa apenas a etapa especificada (0-6 ou 3b)"
+        choices=["0", "1", "2", "3", "3b", "4", "5", "6", "7", "8", "9"],
+        help="Executa apenas a etapa especificada (0-9 ou 3b)"
     )
     parser.add_argument(
         "--list",
