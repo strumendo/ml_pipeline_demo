@@ -315,7 +315,7 @@ VARIAVEIS_PIPELINE = {
     # =========================================================================
     "troca_pecas_equipamentos": {
         "titulo": "Histórico de Troca de Peças por Equipamento",
-        "descricao": "Datas das trocas efetivas de peças (substituição de componentes) e intervalo de operação para cada equipamento. Fonte: Dados Manut - 27 Equip - 2025.xlsx",
+        "descricao": "Datas das trocas efetivas de peças (substituição de componentes) e intervalo de operação para cada equipamento. Fonte: data/manutencao/dados_manutencao.xlsx",
         "equipamentos": {}  # Será preenchido dinamicamente
     }
 }
