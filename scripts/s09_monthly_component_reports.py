@@ -28,10 +28,14 @@ from __future__ import annotations
 import copy
 import shutil
 import sys
+import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import pandas as pd
 from pptx import Presentation
 from pptx.util import Inches, Pt
@@ -284,6 +288,76 @@ def _add_band(slide, left, top, width, height, color):
     return shp
 
 
+_CHART_COLORS = ["#1F3A5F", "#E26E2C", "#2E864E", "#E6B333", "#5B7DB1",
+                 "#C0392B", "#888888"]
+
+
+def _composto_summary(grp: pd.DataFrame, top_n: int = 6) -> pd.DataFrame:
+    """Top N compostos por produção; agrega o resto em 'Outros'."""
+    summary = (
+        grp.groupby("Descrição da massa (Composto)")
+           .agg(qtd=("Qtd. Produzida", "sum"),
+                ref=("Qtd. Refugada", "sum"))
+           .reset_index()
+           .sort_values("qtd", ascending=False)
+    )
+    if len(summary) <= top_n:
+        return summary
+    head = summary.iloc[:top_n].copy()
+    tail = summary.iloc[top_n:]
+    outros = pd.DataFrame([{
+        "Descrição da massa (Composto)": "Outros",
+        "qtd": tail["qtd"].sum(),
+        "ref": tail["ref"].sum(),
+    }])
+    return pd.concat([head, outros], ignore_index=True)
+
+
+def _plot_pie_compostos(summary: pd.DataFrame, png_path: Path) -> Path | None:
+    if summary.empty or summary["qtd"].sum() == 0:
+        return None
+    fig, ax = plt.subplots(figsize=(6.0, 4.0), dpi=150)
+    ax.pie(
+        summary["qtd"],
+        labels=summary["Descrição da massa (Composto)"],
+        autopct="%1.1f%%",
+        colors=_CHART_COLORS[: len(summary)],
+        textprops={"fontsize": 8},
+        startangle=90,
+    )
+    ax.set_title("Distribuição da produção por composto", fontsize=11, color="#1F3A5F")
+    fig.tight_layout()
+    fig.savefig(png_path, bbox_inches="tight")
+    plt.close(fig)
+    return png_path
+
+
+def _plot_bar_refugo(summary: pd.DataFrame, png_path: Path) -> Path | None:
+    if summary.empty or summary["qtd"].sum() == 0:
+        return None
+    df = summary.copy()
+    df["taxa_pct"] = (df["ref"] / df["qtd"].replace(0, pd.NA) * 100).fillna(0.0)
+    fig, ax1 = plt.subplots(figsize=(7.5, 3.8), dpi=150)
+    x = range(len(df))
+    bars = ax1.bar(x, df["ref"], color="#E26E2C", label="Peças refugadas")
+    ax1.set_ylabel("Peças refugadas", color="#E26E2C", fontsize=9)
+    ax1.tick_params(axis="y", labelcolor="#E26E2C", labelsize=8)
+    ax1.set_xticks(list(x))
+    ax1.set_xticklabels(df["Descrição da massa (Composto)"], rotation=30, ha="right", fontsize=8)
+    ax2 = ax1.twinx()
+    ax2.plot(list(x), df["taxa_pct"], color="#1F3A5F", marker="o", linewidth=1.5, label="Taxa de refugo (%)")
+    ax2.set_ylabel("Taxa de refugo (%)", color="#1F3A5F", fontsize=9)
+    ax2.tick_params(axis="y", labelcolor="#1F3A5F", labelsize=8)
+    for b, v in zip(bars, df["ref"]):
+        ax1.text(b.get_x() + b.get_width() / 2, b.get_height(), _fmt_int(v),
+                 ha="center", va="bottom", fontsize=7)
+    fig.suptitle("Refugo por composto", fontsize=11, color="#1F3A5F")
+    fig.tight_layout(rect=[0, 0, 1, 0.94])
+    fig.savefig(png_path, bbox_inches="tight")
+    plt.close(fig)
+    return png_path
+
+
 def _build_pptx(equip: str, prod: pd.DataFrame, hist: pd.DataFrame,
                 prescricao: pd.Series | None, output_path: Path,
                 hoje: pd.Timestamp) -> None:
@@ -380,24 +454,29 @@ def _build_pptx(equip: str, prod: pd.DataFrame, hist: pd.DataFrame,
         _add_text(s, 8.9, 1.3, 4, 0.5, _fmt_int(menor), size=32, bold=True, color=COLOR_ACCENT)
         _add_text(s, 8.9, 2.0, 4, 0.4, "Menor Mês", size=12)
 
-    # --- Slide 4: compostos ---
+    # Diretório temporário pros PNGs deste equipamento
+    tmpdir = Path(tempfile.mkdtemp(prefix=f"s09_{equip}_"))
+
+    # --- Slide 4: compostos (tabela + pie chart) ---
     s = prs.slides.add_slide(blank)
     _add_band(s, 0, 0, SLIDE_WIDTH_IN, 0.8, COLOR_PRIMARY)
     _add_text(s, 0.4, 0.15, 11, 0.5, "Análise de Materiais e Compostos",
               size=22, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF))
     if not grp.empty:
-        composto_summary = (
+        composto_summary_full = (
             grp.groupby("Descrição da massa (Composto)")
                .agg(qtd=("Qtd. Produzida", "sum"),
                     ref=("Qtd. Refugada", "sum"),
                     meses=("ano_mes", "nunique"))
                .reset_index()
                .sort_values("qtd", ascending=False)
-               .head(6)
         )
+        composto_summary = composto_summary_full.head(6)
+        # Tabela à esquerda
         rows = len(composto_summary) + 1
         cols = 5
-        tbl_shape = s.shapes.add_table(rows, cols, Inches(0.5), Inches(1.2), Inches(12), Inches(0.45 * rows))
+        tbl_shape = s.shapes.add_table(rows, cols, Inches(0.4), Inches(1.1),
+                                        Inches(7.0), Inches(0.4 * rows))
         tbl = tbl_shape.table
         for i, h in enumerate(["Composto", "Produzido", "% Total", "Refugo", "Meses"]):
             cell = tbl.cell(0, i)
@@ -405,7 +484,7 @@ def _build_pptx(equip: str, prod: pd.DataFrame, hist: pd.DataFrame,
             for p in cell.text_frame.paragraphs:
                 for r in p.runs:
                     r.font.bold = True
-                    r.font.size = Pt(11)
+                    r.font.size = Pt(10)
         for ri, (_, r) in enumerate(composto_summary.iterrows(), start=1):
             tbl.cell(ri, 0).text = str(r["Descrição da massa (Composto)"])
             tbl.cell(ri, 1).text = _fmt_int(r["qtd"])
@@ -415,21 +494,38 @@ def _build_pptx(equip: str, prod: pd.DataFrame, hist: pd.DataFrame,
             for ci in range(cols):
                 for p in tbl.cell(ri, ci).text_frame.paragraphs:
                     for run in p.runs:
-                        run.font.size = Pt(10)
+                        run.font.size = Pt(9)
+        # Pie chart à direita
+        pie_summary = _composto_summary(grp, top_n=6)
+        pie_png = _plot_pie_compostos(pie_summary, tmpdir / "pie_compostos.png")
+        if pie_png is not None:
+            s.shapes.add_picture(str(pie_png), Inches(7.6), Inches(1.1),
+                                 width=Inches(5.5), height=Inches(4.0))
 
-    # --- Slide 5: qualidade ---
+    # --- Slide 5: qualidade (bar chart de refugo + métricas) ---
     s = prs.slides.add_slide(blank)
     _add_band(s, 0, 0, SLIDE_WIDTH_IN, 0.8, COLOR_PRIMARY)
     _add_text(s, 0.4, 0.15, 11, 0.5, "Controle de Qualidade — Taxa de Refugo",
               size=22, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF))
-    _add_text(s, 0.5, 1.4, 6, 0.6, _fmt_pct(taxa_ref), size=42, bold=True, color=COLOR_ACCENT)
-    _add_text(s, 0.5, 2.3, 6, 0.4, "Taxa de Refugo Global", size=14)
-    _add_text(s, 0.5, 3.0, 6, 0.4, f"{_fmt_int(total_ref)} peças refugadas em {_fmt_int(total_prod)}", size=12)
+    # KPIs no topo
+    _add_text(s, 0.5, 1.0, 4, 0.5, _fmt_pct(taxa_ref), size=32, bold=True, color=COLOR_ACCENT)
+    _add_text(s, 0.5, 1.7, 4, 0.4, "Taxa de Refugo Global", size=11)
+    _add_text(s, 4.7, 1.0, 4, 0.5, _fmt_int(total_ref), size=32, bold=True, color=COLOR_ACCENT)
+    _add_text(s, 4.7, 1.7, 4, 0.4, "Peças Refugadas", size=11)
+    _add_text(s, 8.9, 1.0, 4, 0.5, _fmt_int(total_prod), size=32, bold=True, color=COLOR_PRIMARY)
+    _add_text(s, 8.9, 1.7, 4, 0.4, "Peças Produzidas", size=11)
     nivel = "Dentro do limite aceitável" if taxa_ref < 1.5 else "Acima da meta — investigar"
-    _add_text(s, 0.5, 3.5, 6, 0.4, nivel, size=12, bold=True,
+    _add_text(s, 0.5, 2.3, 12, 0.4, nivel, size=12, bold=True,
               color=COLOR_PRIMARY if taxa_ref < 1.5 else COLOR_ACCENT)
+    # Bar chart de refugo por composto
+    if not grp.empty:
+        bar_summary = _composto_summary(grp, top_n=6)
+        bar_png = _plot_bar_refugo(bar_summary, tmpdir / "bar_refugo.png")
+        if bar_png is not None:
+            s.shapes.add_picture(str(bar_png), Inches(0.5), Inches(2.9),
+                                 width=Inches(12.3), height=Inches(4.3))
 
-    # --- Slide 6: manutenção (prescrição) ---
+    # --- Slide 6: manutenção (prescrição com tabela 3 colunas) ---
     s = prs.slides.add_slide(blank)
     _add_band(s, 0, 0, SLIDE_WIDTH_IN, 0.8, COLOR_PRIMARY)
     _add_text(s, 0.4, 0.15, 11, 0.5, "Estratégia de Manutenção Preventiva",
@@ -450,24 +546,38 @@ def _build_pptx(equip: str, prod: pd.DataFrame, hist: pd.DataFrame,
                   size=14, bold=True, color=COLOR_PRIMARY)
         _add_text(s, 0.5, 3.1, 8, 0.4, f"Última troca: {_fmt_dt(prescricao.get('data_ultima_substituicao'))}",
                   size=12)
-        # tabela de fatores
-        rows = 5
-        tbl_shape = s.shapes.add_table(rows, 2, Inches(0.5), Inches(4.0), Inches(8), Inches(2.6))
-        tbl = tbl_shape.table
+        # Tabela 3 colunas: Campo | Valor | Efeito
         items = [
-            ("T_base (dias)", str(prescricao["T_base_dias"])),
-            ("Fator desgaste", str(prescricao["fator_desgaste"])),
-            ("Fator massa", str(prescricao["fator_massa"])),
-            ("T_prescrito (dias)", str(prescricao["T_prescrito_dias"])),
-            ("Dias ociosidade", str(prescricao["dias_ociosidade"])),
+            ("T_base (dias)", str(prescricao["T_base_dias"]),
+             "Mediana histórica do equipamento (fallback 450)"),
+            ("Fator desgaste", str(prescricao["fator_desgaste"]),
+             "<1 acelera (componente desgastado), >1 estende"),
+            ("Fator massa", str(prescricao["fator_massa"]),
+             "<1 acelera (massa pesada), >1 estende"),
+            ("T_prescrito (dias)", str(prescricao["T_prescrito_dias"]),
+             "T_base × fator_desgaste × fator_massa"),
+            ("Dias ociosidade", str(prescricao["dias_ociosidade"]),
+             "Soma à data prescrita (compensa dias parado)"),
         ]
-        for i, (k, v) in enumerate(items):
-            tbl.cell(i, 0).text = k
-            tbl.cell(i, 1).text = v
-            for ci in range(2):
-                for p in tbl.cell(i, ci).text_frame.paragraphs:
+        rows = len(items) + 1
+        tbl_shape = s.shapes.add_table(rows, 3, Inches(0.5), Inches(4.0),
+                                        Inches(12.3), Inches(0.45 * rows))
+        tbl = tbl_shape.table
+        for i, h in enumerate(["Campo", "Valor", "Efeito"]):
+            cell = tbl.cell(0, i)
+            cell.text = h
+            for p in cell.text_frame.paragraphs:
+                for r in p.runs:
+                    r.font.bold = True
+                    r.font.size = Pt(11)
+        for ri, (k, v, efeito) in enumerate(items, start=1):
+            tbl.cell(ri, 0).text = k
+            tbl.cell(ri, 1).text = v
+            tbl.cell(ri, 2).text = efeito
+            for ci in range(3):
+                for p in tbl.cell(ri, ci).text_frame.paragraphs:
                     for run in p.runs:
-                        run.font.size = Pt(11)
+                        run.font.size = Pt(10)
 
     # --- Slide 7: conclusões ---
     s = prs.slides.add_slide(blank)
@@ -489,6 +599,7 @@ def _build_pptx(equip: str, prod: pd.DataFrame, hist: pd.DataFrame,
         _add_text(s, 0.7, 1.9 + i * 0.6, 12, 0.5, "• " + b, size=12)
 
     prs.save(str(output_path))
+    shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def _merge_pptx(pptx_files: list[Path], output_path: Path) -> None:
