@@ -278,7 +278,7 @@ VARIAVEIS_PIPELINE = {
             },
             {
                 "nome": "Cod_Produto_*",
-                "nome_processado": "Cod_Produto_SAXXXXX",
+                "nome_processado": "Cod_Produto_PRXXXXX",
                 "tipo": "int (0/1)",
                 "descricao": "Variáveis binárias para cada código de produto. Permite análise de impacto por tipo de produto.",
                 "exemplo": "Cod_Produto_PR10001 = 1",
@@ -315,7 +315,7 @@ VARIAVEIS_PIPELINE = {
     # =========================================================================
     "troca_pecas_equipamentos": {
         "titulo": "Histórico de Troca de Peças por Equipamento",
-        "descricao": "Datas das trocas efetivas de peças (substituição de componentes) e intervalo de operação para cada equipamento. Fonte: Dados Manut - 27 Equip - 2025.xlsx",
+        "descricao": "Datas das trocas efetivas de peças (substituição de componentes) e intervalo de operação para cada equipamento. Fonte: data/manutencao/dados_manutencao.xlsx",
         "equipamentos": {}  # Será preenchido dinamicamente
     }
 }
@@ -441,10 +441,10 @@ def load_equipment_stats() -> dict:
                     "total_refugado": item.get("total_refugado", 0),
                     "taxa_refugo_pct": item.get("taxa_refugo_pct", 0),
                     "indice_desgaste": item.get("indice_desgaste_medio", 0),
-                    "cilindro_max": item.get("cilindro_max"),
-                    "cilindro_min": item.get("cilindro_min"),
-                    "fuso_max": item.get("fuso_max"),
-                    "fuso_min": item.get("fuso_min"),
+                    "componente_a_max": item.get("componente_a_max"),
+                    "componente_a_min": item.get("componente_a_min"),
+                    "componente_b_max": item.get("componente_b_max"),
+                    "componente_b_min": item.get("componente_b_min"),
                     "observacoes": item.get("observacoes_manutencao"),
                 }
 
@@ -1424,7 +1424,7 @@ def generate_pdf_report(results: dict, output_path: str, inicio: str = None, fim
     story.append(Paragraph(
         f"Esta tabela apresenta a previsão do <b>modelo {model_name.upper()}</b> (R² = {r2:.4f}), "
         "que considera o <b>estado atual</b> de cada equipamento: produção acumulada, índice de desgaste, "
-        "taxa de refugo, medições de cilindro/fuso, entre outros fatores. "
+        "taxa de refugo, medições dos componentes A e B, entre outros fatores. "
         "Esta é a <b>previsão recomendada</b> para tomada de decisão.",
         body_style
     ))
@@ -1620,9 +1620,9 @@ def generate_pdf_report(results: dict, output_path: str, inicio: str = None, fim
     ))
     fatores_troca = [
         "<b>Produção Acumulada</b>: Volume total de peças produzidas desde a última troca",
-        "<b>Índice de Desgaste</b>: Score combinado (0-100) baseado nas medições de cilindro e fuso",
-        "<b>Medições de Cilindro</b>: Variação, máximo e mínimo das medições do cilindro",
-        "<b>Medições de Fuso</b>: Variação, máximo e mínimo das medições do fuso",
+        "<b>Índice de Desgaste</b>: Score combinado (0-100) baseado nas medições dos componentes A e B",
+        "<b>Medições do Componente A</b>: Variação, máximo e mínimo das medições do componente A",
+        "<b>Medições do Componente B</b>: Variação, máximo e mínimo das medições do componente B",
         "<b>Taxa de Refugo/Retrabalho</b>: Indicadores de qualidade acumulados",
         "<b>Consumo de Massa</b>: Consumo de matéria-prima em relação à produção",
         "<b>Taxa de Desgaste</b>: Desgaste por unidade de tempo ou produção",

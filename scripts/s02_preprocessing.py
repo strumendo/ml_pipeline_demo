@@ -94,12 +94,12 @@ def load_full_maintenance_data() -> tuple:
     EQUIPAMENTO_MEDICOES contém para cada equipamento:
         - data_ultima_manutencao, data_penultima_manutencao
         - dias_operacao, observacoes
-        - cilindro_a, cilindro_b, cilindro_c, cilindro_d, cilindro_e
-        - cilindro_max, cilindro_min, cilindro_variacao
-        - fuso_a, fuso_b, fuso_c, fuso_d
-        - fuso_max, fuso_min, fuso_variacao
-        - desgaste_cilindro (diferença max-min normalizada)
-        - desgaste_fuso (diferença max-min normalizada)
+        - componente_a_p1, componente_a_p2, componente_a_p3, componente_a_p4, componente_a_p5
+        - componente_a_max, componente_a_min, componente_a_variacao
+        - componente_b_p1, componente_b_p2, componente_b_p3, componente_b_p4
+        - componente_b_max, componente_b_min, componente_b_variacao
+        - desgaste_componente_a (diferença max-min normalizada)
+        - desgaste_componente_b (diferença max-min normalizada)
     """
     global _MAINTENANCE_CACHE
 
@@ -141,8 +141,8 @@ def load_full_maintenance_data() -> tuple:
         # Coluna 3: Data da penúltima substituição
         # Coluna 4: Dias em operação
         # Coluna 5: Observações
-        # Colunas 6-12: Medições Cilindro (A, B, C, D, E, Máximo, Mínimo)
-        # Colunas 13-18: Medições Fuso (A, B, C, D, Máximo, Mínimo)
+        # Colunas 6-12: Medições Componente A (A, B, C, D, E, Máximo, Mínimo)
+        # Colunas 13-18: Medições Componente B (A, B, C, D, Máximo, Mínimo)
 
         for idx, row in df.iterrows():
             if idx < 2:  # Pular cabeçalhos
@@ -194,62 +194,62 @@ def load_full_maintenance_data() -> tuple:
                 "observacoes": str(observacoes) if pd.notna(observacoes) else None,
             }
 
-            # Cilindro
-            cil_a = _safe_float(row[6])
-            cil_b = _safe_float(row[7])
-            cil_c = _safe_float(row[8])
-            cil_d = _safe_float(row[9])
-            cil_e = _safe_float(row[10])
-            cil_max = _safe_float(row[11])
-            cil_min = _safe_float(row[12])
+            # Componente A
+            comp_a_p1 = _safe_float(row[6])
+            comp_a_p2 = _safe_float(row[7])
+            comp_a_p3 = _safe_float(row[8])
+            comp_a_p4 = _safe_float(row[9])
+            comp_a_p5 = _safe_float(row[10])
+            comp_a_max = _safe_float(row[11])
+            comp_a_min = _safe_float(row[12])
 
-            medicoes["cilindro_a"] = cil_a
-            medicoes["cilindro_b"] = cil_b
-            medicoes["cilindro_c"] = cil_c
-            medicoes["cilindro_d"] = cil_d
-            medicoes["cilindro_e"] = cil_e
-            medicoes["cilindro_max"] = cil_max
-            medicoes["cilindro_min"] = cil_min
+            medicoes["componente_a_p1"] = comp_a_p1
+            medicoes["componente_a_p2"] = comp_a_p2
+            medicoes["componente_a_p3"] = comp_a_p3
+            medicoes["componente_a_p4"] = comp_a_p4
+            medicoes["componente_a_p5"] = comp_a_p5
+            medicoes["componente_a_max"] = comp_a_max
+            medicoes["componente_a_min"] = comp_a_min
 
-            # Calcular variação e desgaste do cilindro
-            if cil_max is not None and cil_min is not None:
-                medicoes["cilindro_variacao"] = cil_max - cil_min
+            # Calcular variação e desgaste do componente A
+            if comp_a_max is not None and comp_a_min is not None:
+                medicoes["componente_a_variacao"] = comp_a_max - comp_a_min
                 # Desgaste normalizado (quanto maior, mais desgastado)
-                # Valor nominal do cilindro é ~20mm
-                medicoes["desgaste_cilindro"] = (cil_max - 20.0) if cil_max else 0.0
+                # Valor nominal do componente A é ~20mm
+                medicoes["desgaste_componente_a"] = (comp_a_max - 20.0) if comp_a_max else 0.0
             else:
-                medicoes["cilindro_variacao"] = None
-                medicoes["desgaste_cilindro"] = None
+                medicoes["componente_a_variacao"] = None
+                medicoes["desgaste_componente_a"] = None
 
-            # Fuso (colunas 13-18)
-            fuso_a = _safe_float(row[13])
-            fuso_b = _safe_float(row[14])
-            fuso_c = _safe_float(row[15])
-            fuso_d = _safe_float(row[16])
-            fuso_max = _safe_float(row[17])
-            fuso_min = _safe_float(row[18])
+            # Componente B (colunas 13-18)
+            componente_b_p1 = _safe_float(row[13])
+            componente_b_p2 = _safe_float(row[14])
+            componente_b_p3 = _safe_float(row[15])
+            componente_b_p4 = _safe_float(row[16])
+            componente_b_max = _safe_float(row[17])
+            componente_b_min = _safe_float(row[18])
 
-            medicoes["fuso_a"] = fuso_a
-            medicoes["fuso_b"] = fuso_b
-            medicoes["fuso_c"] = fuso_c
-            medicoes["fuso_d"] = fuso_d
-            medicoes["fuso_max"] = fuso_max
-            medicoes["fuso_min"] = fuso_min
+            medicoes["componente_b_p1"] = componente_b_p1
+            medicoes["componente_b_p2"] = componente_b_p2
+            medicoes["componente_b_p3"] = componente_b_p3
+            medicoes["componente_b_p4"] = componente_b_p4
+            medicoes["componente_b_max"] = componente_b_max
+            medicoes["componente_b_min"] = componente_b_min
 
-            # Calcular variação e desgaste do fuso
-            if fuso_max is not None and fuso_min is not None:
-                medicoes["fuso_variacao"] = fuso_max - fuso_min
-                # Desgaste do fuso (quanto menor em relação a 20mm, mais desgastado)
-                medicoes["desgaste_fuso"] = (20.0 - fuso_min) if fuso_min else 0.0
+            # Calcular variação e desgaste do componente B
+            if componente_b_max is not None and componente_b_min is not None:
+                medicoes["componente_b_variacao"] = componente_b_max - componente_b_min
+                # Desgaste do componente B (quanto menor em relação a 20mm, mais desgastado)
+                medicoes["desgaste_componente_b"] = (20.0 - componente_b_min) if componente_b_min else 0.0
             else:
-                medicoes["fuso_variacao"] = None
-                medicoes["desgaste_fuso"] = None
+                medicoes["componente_b_variacao"] = None
+                medicoes["desgaste_componente_b"] = None
 
             equipamento_medicoes[equipamento] = medicoes
 
         print(f"    ✓ Carregados {len(equipamento_manutencao)} equipamentos")
         equip_com_medicoes = sum(1 for m in equipamento_medicoes.values()
-                                  if m.get("cilindro_a") is not None or m.get("fuso_a") is not None)
+                                  if m.get("componente_a_p1") is not None or m.get("componente_b_p1") is not None)
         print(f"    ✓ Equipamentos com medições: {equip_com_medicoes}")
 
     except Exception as e:
@@ -356,7 +356,7 @@ EQUIPAMENTO_INTERVALO = _get_default_intervals()
 
 def add_measurement_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Adiciona features de medições de desgaste (cilindro e fuso) ao DataFrame.
+    Adiciona features de medições de desgaste (componente A e componente B) ao DataFrame.
 
     Carrega as medições do arquivo de manutenção e as incorpora como features
     para cada equipamento. Também calcula features derivadas como:
@@ -391,8 +391,8 @@ def add_measurement_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Features de medição a adicionar
     measurement_features = [
-        "cilindro_max", "cilindro_min", "cilindro_variacao", "desgaste_cilindro",
-        "fuso_max", "fuso_min", "fuso_variacao", "desgaste_fuso"
+        "componente_a_max", "componente_a_min", "componente_a_variacao", "desgaste_componente_a",
+        "componente_b_max", "componente_b_min", "componente_b_variacao", "desgaste_componente_b"
     ]
 
     # Adicionar colunas de medição
@@ -408,24 +408,24 @@ def add_measurement_features(df: pd.DataFrame) -> pd.DataFrame:
         lambda x: equip_intervalo.get(x, 365)
     )
 
-    # 2. Taxa de desgaste estimada do cilindro por dia
+    # 2. Taxa de desgaste estimada do componente A por dia
     #    (desgaste / dias de operação)
-    df["taxa_desgaste_cilindro"] = df.apply(
-        lambda row: (row["desgaste_cilindro"] / row["intervalo_manutencao"])
-        if pd.notna(row["desgaste_cilindro"]) and row["intervalo_manutencao"] > 0
+    df["taxa_desgaste_componente_a"] = df.apply(
+        lambda row: (row["desgaste_componente_a"] / row["intervalo_manutencao"])
+        if pd.notna(row["desgaste_componente_a"]) and row["intervalo_manutencao"] > 0
         else 0.0,
         axis=1
     )
 
-    # 3. Taxa de desgaste estimada do fuso por dia
-    df["taxa_desgaste_fuso"] = df.apply(
-        lambda row: (row["desgaste_fuso"] / row["intervalo_manutencao"])
-        if pd.notna(row["desgaste_fuso"]) and row["intervalo_manutencao"] > 0
+    # 3. Taxa de desgaste estimada do componente B por dia
+    df["taxa_desgaste_componente_b"] = df.apply(
+        lambda row: (row["desgaste_componente_b"] / row["intervalo_manutencao"])
+        if pd.notna(row["desgaste_componente_b"]) and row["intervalo_manutencao"] > 0
         else 0.0,
         axis=1
     )
 
-    # 4. Índice de desgaste combinado (média ponderada cilindro + fuso)
+    # 4. Índice de desgaste combinado (média ponderada componente A + componente B)
     df["indice_desgaste"] = df.apply(
         lambda row: _calc_indice_desgaste(row),
         axis=1
@@ -446,7 +446,7 @@ def add_measurement_features(df: pd.DataFrame) -> pd.DataFrame:
         )
 
     # Preencher valores nulos de medição com a média do grupo
-    for feature in measurement_features + ["indice_desgaste", "taxa_desgaste_cilindro", "taxa_desgaste_fuso"]:
+    for feature in measurement_features + ["indice_desgaste", "taxa_desgaste_componente_a", "taxa_desgaste_componente_b"]:
         if feature in df.columns:
             median_val = df[feature].median()
             if pd.notna(median_val):
@@ -465,29 +465,29 @@ def _calc_indice_desgaste(row) -> float:
     Calcula índice de desgaste combinado (0-100).
 
     O índice considera:
-    - Desgaste do cilindro (peso 60%)
-    - Desgaste do fuso (peso 40%)
+    - Desgaste do componente A (peso 60%)
+    - Desgaste do componente B (peso 40%)
 
     Valores maiores indicam maior urgência de manutenção.
     """
-    desgaste_cil = row.get("desgaste_cilindro")
-    desgaste_fuso = row.get("desgaste_fuso")
+    desgaste_cil = row.get("desgaste_componente_a")
+    desgaste_componente_b = row.get("desgaste_componente_b")
 
     # Normalizar para escala 0-100
-    # Desgaste cilindro: 0-0.6mm típico → 0-100
-    # Desgaste fuso: 0-2mm típico → 0-100
+    # Desgaste componente A: 0-0.6mm típico → 0-100
+    # Desgaste componente B: 0-2mm típico → 0-100
 
     score_cil = 0.0
-    score_fuso = 0.0
+    score_componente_b = 0.0
 
     if pd.notna(desgaste_cil):
         score_cil = min(100, (desgaste_cil / 0.6) * 100)
 
-    if pd.notna(desgaste_fuso):
-        score_fuso = min(100, (desgaste_fuso / 2.0) * 100)
+    if pd.notna(desgaste_componente_b):
+        score_componente_b = min(100, (desgaste_componente_b / 2.0) * 100)
 
-    # Peso: 60% cilindro, 40% fuso
-    return (score_cil * 0.6) + (score_fuso * 0.4)
+    # Peso: 60% componente A, 40% componente B
+    return (score_cil * 0.6) + (score_componente_b * 0.4)
 
 
 def _calc_desgaste_por_pecas(row, qty_col: str, equip_medicoes: dict) -> float:
@@ -506,13 +506,13 @@ def _calc_desgaste_por_pecas(row, qty_col: str, equip_medicoes: dict) -> float:
     medicoes = equip_medicoes.get(equip, {})
     desgaste_total = 0.0
 
-    desg_cil = medicoes.get("desgaste_cilindro")
-    desg_fuso = medicoes.get("desgaste_fuso")
+    desg_cil = medicoes.get("desgaste_componente_a")
+    desg_componente_b = medicoes.get("desgaste_componente_b")
 
     if pd.notna(desg_cil):
         desgaste_total += desg_cil
-    if pd.notna(desg_fuso):
-        desgaste_total += desg_fuso
+    if pd.notna(desg_componente_b):
+        desgaste_total += desg_componente_b
 
     # Taxa por 1000 peças
     return (desgaste_total / qty_acum) * 1000
@@ -587,7 +587,7 @@ def calculate_equipment_statistics(df: pd.DataFrame) -> pd.DataFrame:
         agg_dict["Manutencao"] = ["mean", "min", "max"]
 
     # Features de desgaste
-    for col in ["indice_desgaste", "desgaste_cilindro", "desgaste_fuso"]:
+    for col in ["indice_desgaste", "desgaste_componente_a", "desgaste_componente_b"]:
         if col in df.columns:
             agg_dict[col] = ["mean"]
 
@@ -620,20 +620,20 @@ def calculate_equipment_statistics(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # Adicionar medições
-    stats["cilindro_max"] = stats[equip_col].apply(
-        lambda x: equip_medicoes.get(x, {}).get("cilindro_max")
+    stats["componente_a_max"] = stats[equip_col].apply(
+        lambda x: equip_medicoes.get(x, {}).get("componente_a_max")
     )
 
-    stats["cilindro_min"] = stats[equip_col].apply(
-        lambda x: equip_medicoes.get(x, {}).get("cilindro_min")
+    stats["componente_a_min"] = stats[equip_col].apply(
+        lambda x: equip_medicoes.get(x, {}).get("componente_a_min")
     )
 
-    stats["fuso_max"] = stats[equip_col].apply(
-        lambda x: equip_medicoes.get(x, {}).get("fuso_max")
+    stats["componente_b_max"] = stats[equip_col].apply(
+        lambda x: equip_medicoes.get(x, {}).get("componente_b_max")
     )
 
-    stats["fuso_min"] = stats[equip_col].apply(
-        lambda x: equip_medicoes.get(x, {}).get("fuso_min")
+    stats["componente_b_min"] = stats[equip_col].apply(
+        lambda x: equip_medicoes.get(x, {}).get("componente_b_min")
     )
 
     # Calcular taxa de refugo
@@ -682,10 +682,10 @@ def calculate_equipment_statistics(df: pd.DataFrame) -> pd.DataFrame:
             rename_map[old_col] = "max_dias_manutencao"
         elif "indice_desgaste_mean" in old_col:
             rename_map[old_col] = "indice_desgaste_medio"
-        elif "desgaste_cilindro_mean" in old_col:
-            rename_map[old_col] = "desgaste_cilindro_medio"
-        elif "desgaste_fuso_mean" in old_col:
-            rename_map[old_col] = "desgaste_fuso_medio"
+        elif "desgaste_componente_a_mean" in old_col:
+            rename_map[old_col] = "desgaste_componente_a_medio"
+        elif "desgaste_componente_b_mean" in old_col:
+            rename_map[old_col] = "desgaste_componente_b_medio"
 
     stats = stats.rename(columns=rename_map)
 

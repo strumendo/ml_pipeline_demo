@@ -55,37 +55,41 @@ class HistoryManager:
         step_data = {
             "timestamp": datetime.now().isoformat(),
             "models": {},
+            "extras": {},
             "params": params or {},
             "best_model": None,
             "best_mse": float("inf"),
             "best_r2": float("-inf")
         }
 
-        # Processar resultados de cada modelo
-        for model_name, model_results in results.items():
-            if isinstance(model_results, dict) and "mse" in model_results:
+        # Processar resultados de cada modelo (e capturar artefatos não-modelo)
+        for key, value in results.items():
+            if isinstance(value, dict) and "mse" in value:
                 model_info = {
-                    "mse": model_results.get("mse"),
-                    "r2": model_results.get("r2"),
-                    "accuracy": model_results.get("accuracy"),
+                    "mse": value.get("mse"),
+                    "r2": value.get("r2"),
+                    "accuracy": value.get("accuracy"),
                 }
-
-                # Remover None values
                 model_info = {k: v for k, v in model_info.items() if v is not None}
-                step_data["models"][model_name] = model_info
+                step_data["models"][key] = model_info
 
-                # Verificar se é o melhor modelo (por MSE)
-                if model_results.get("mse") is not None:
-                    if model_results["mse"] < step_data["best_mse"]:
-                        step_data["best_mse"] = model_results["mse"]
-                        step_data["best_r2"] = model_results.get("r2", 0)
-                        step_data["best_model"] = model_name
+                if value.get("mse") is not None:
+                    if value["mse"] < step_data["best_mse"]:
+                        step_data["best_mse"] = value["mse"]
+                        step_data["best_r2"] = value.get("r2", 0)
+                        step_data["best_model"] = key
+            elif isinstance(value, (str, int, float, bool, list)) or value is None:
+                # Artefato genérico (contagens, paths, status) — útil para estágios não-ML
+                step_data["extras"][key] = value
 
         self.run_data["steps"][step_name] = step_data
 
         print(f"\n📊 Histórico registrado para: {step_name}")
         if step_data["best_model"]:
             print(f"   Melhor modelo: {step_data['best_model']} (MSE: {step_data['best_mse']:.4f})")
+        elif step_data["extras"]:
+            n = len(step_data["extras"])
+            print(f"   Artefatos registrados: {n} campo(s)")
 
     def log_classification_step(self, step_name: str, results: dict, params: Optional[dict] = None):
         """

@@ -12,9 +12,10 @@ BASE_DIR = Path(__file__).parent.parent
 # Diretórios principais
 DATA_DIR = BASE_DIR / "data"
 DATA_RAW_DIR = DATA_DIR / "raw"
-DATA_MANUTENCAO_DIR = DATA_DIR / "manutencao"  # Nova pasta de manutenção
+DATA_MANUTENCAO_DIR = DATA_DIR / "manutencao"
 DATA_ARQUIVO_UNICO_DIR = DATA_DIR / "arquivo_unico"
 DATA_ARQUIVO_UNICO_PROCESSADO_DIR = DATA_DIR / "arquivo_unico_processado"
+DATA_REFERENCE_SCHEMA_DIR = DATA_DIR / "_reference_schema"
 SCRIPTS_DIR = BASE_DIR / "scripts"
 OUTPUTS_DIR = BASE_DIR / "outputs"
 CONFIG_DIR = BASE_DIR / "config"
@@ -24,6 +25,9 @@ MODELS_DIR = OUTPUTS_DIR / "models"
 PLOTS_DIR = OUTPUTS_DIR / "plots"
 REPORTS_DIR = OUTPUTS_DIR / "reports"
 HISTORY_DIR = OUTPUTS_DIR / "history"
+EDA_PLOTS_DIR = OUTPUTS_DIR / "eda_plots"
+RELATORIOS_COMPONENTES_DIR = OUTPUTS_DIR / "relatorios_mensais_componentes"
+RELATORIOS_COMPONENTES_PPT_DIR = OUTPUTS_DIR / "relatorios_mensais_componentes_ppt"
 
 
 # Arquivos intermediários (gerados durante o pipeline)
@@ -35,6 +39,13 @@ BEST_MODEL_FILE = MODELS_DIR / "best_model.joblib"
 EDA_REPORT_FILE = OUTPUTS_DIR / "eda_report.txt"
 EVALUATION_REPORT_FILE = OUTPUTS_DIR / "evaluation_report.txt"
 
+# Artefatos de cruzamento e prescrição (s07/s08)
+HISTORICO_COMPLETO_FILE = OUTPUTS_DIR / "historico_completo.csv"
+HISTORICO_RECENTE_FILE = OUTPUTS_DIR / "historico_recente.csv"
+JANELAS_OPERACAO_FILE = OUTPUTS_DIR / "janelas_operacao.csv"
+OCIOSIDADE_FILE = OUTPUTS_DIR / "ociosidade.csv"
+PRESCRICAO_MANUTENCAO_FILE = OUTPUTS_DIR / "prescricao_manutencao.csv"
+
 # Arquivo de estado para automação
 DATA_STATE_FILE = OUTPUTS_DIR / ".data_state.json"
 
@@ -42,9 +53,12 @@ DATA_STATE_FILE = OUTPUTS_DIR / ".data_state.json"
 def ensure_directories():
     """Cria todos os diretórios necessários se não existirem."""
     dirs = [
-        DATA_DIR, DATA_RAW_DIR, OUTPUTS_DIR, MODELS_DIR,
-        PLOTS_DIR, REPORTS_DIR, HISTORY_DIR, CONFIG_DIR,
-        DATA_ARQUIVO_UNICO_DIR, DATA_ARQUIVO_UNICO_PROCESSADO_DIR
+        DATA_DIR, DATA_RAW_DIR, DATA_MANUTENCAO_DIR,
+        DATA_ARQUIVO_UNICO_DIR, DATA_ARQUIVO_UNICO_PROCESSADO_DIR,
+        DATA_REFERENCE_SCHEMA_DIR,
+        OUTPUTS_DIR, MODELS_DIR, PLOTS_DIR, REPORTS_DIR, HISTORY_DIR,
+        EDA_PLOTS_DIR, RELATORIOS_COMPONENTES_DIR, RELATORIOS_COMPONENTES_PPT_DIR,
+        CONFIG_DIR,
     ]
     for d in dirs:
         d.mkdir(parents=True, exist_ok=True)
@@ -59,20 +73,25 @@ def get_maintenance_file() -> Path:
     """
     Retorna o caminho do arquivo de manutenção mais recente.
 
-    Procura arquivos no padrão "Dados Manut*.xlsx" na pasta data/manutencao/
+    Procura arquivos nos padrões "Dados Manut*.xlsx" (legado) ou
+    "dados_manutencao*.xlsx" (gerado pelo dummy) em data/manutencao/
     ou data/ (fallback).
 
     Returns:
         Path do arquivo ou None se não encontrado
     """
-    # Primeiro, procurar na nova pasta data/manutencao/
+    patterns = ("Dados Manut*.xlsx", "dados_manutencao*.xlsx")
+
     if DATA_MANUTENCAO_DIR.exists():
-        maint_files = list(DATA_MANUTENCAO_DIR.glob("Dados Manut*.xlsx"))
+        maint_files = []
+        for pat in patterns:
+            maint_files.extend(DATA_MANUTENCAO_DIR.glob(pat))
         if maint_files:
             return max(maint_files, key=lambda f: f.stat().st_mtime)
 
-    # Fallback para pasta data/ (compatibilidade)
-    maint_files = list(DATA_DIR.glob("Dados Manut*.xlsx"))
+    maint_files = []
+    for pat in patterns:
+        maint_files.extend(DATA_DIR.glob(pat))
     if maint_files:
         return max(maint_files, key=lambda f: f.stat().st_mtime)
 
@@ -109,7 +128,8 @@ def get_all_maintenance_files() -> dict:
         files["csv"] = sorted(DATA_MANUTENCAO_DIR.glob("*.csv"))
 
     # Incluir arquivos da pasta data/ (compatibilidade)
-    files["xlsx"].extend(list(DATA_DIR.glob("Dados Manut*.xlsx")))
+    for pat in ("Dados Manut*.xlsx", "dados_manutencao*.xlsx"):
+        files["xlsx"].extend(list(DATA_DIR.glob(pat)))
 
     return files
 

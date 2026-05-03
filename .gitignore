@@ -36,3 +36,6 @@ outputs/*.txt
 outputs/*.csv
 outputs/*.json
 outputs/.data_state.json
+outputs/relatorios_mensais_componentes/
+outputs/relatorios_mensais_componentes_ppt/
+outputs/reports/

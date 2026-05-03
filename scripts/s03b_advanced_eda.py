@@ -5,7 +5,7 @@ Complemento da Etapa 3 - Análises baseadas nos notebooks exploratórios
 
 O QUE FAZ:
 - Gráficos avançados baseados em exploratory_analise/
-- Análise por equipamento (correlation_matrix_cilindros)
+- Análise por equipamento (correlation_matrix_full)
 - Consumo de massa vs quantidade produzida
 - Ano de construção vs consumo
 - Matriz de confusão para classificação de urgência
@@ -41,7 +41,7 @@ except ImportError:
 
 def generate_full_correlation_matrix(df: pd.DataFrame, output_dir: Path) -> str:
     """
-    Gera matriz de correlação completa similar a correlation_matrix_cilindros.png.
+    Gera matriz de correlação completa.
 
     Args:
         df: DataFrame de entrada
@@ -341,7 +341,7 @@ def get_equipment_from_onehot(df: pd.DataFrame) -> pd.Series:
     Extrai o nome do equipamento das colunas one-hot encoded.
 
     Args:
-        df: DataFrame com colunas Equipamento_IJ_XXX
+        df: DataFrame com colunas Equipamento_EQ_XXX
 
     Returns:
         Series com nome do equipamento para cada registro
