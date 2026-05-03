@@ -709,15 +709,27 @@ def main(**kwargs) -> dict:
     _zip_dir(RELATORIOS_COMPONENTES_PPT_DIR, zip_path)
     print(f"  ✓ {zip_path.name}")
 
+    md_files = sorted(RELATORIOS_COMPONENTES_DIR.glob("EQ-*.md"))
+    pdf_files = sorted(RELATORIOS_COMPONENTES_PPT_DIR.glob("EQ-*.pdf"))
+    total_apontamentos = sum(n for _, n in index_rows)
+    zip_kb = round(zip_path.stat().st_size / 1024, 1) if zip_path.exists() else 0
+    consolidado_kb = round(consolidated.stat().st_size / 1024, 1) if pptx_files and consolidated.exists() else 0
+
     print("\n" + "=" * 60)
     print("ETAPA 9 CONCLUÍDA")
     print("=" * 60)
     return {
         "status": "success",
         "n_equipamentos": len(equipamentos),
+        "n_md": len(md_files),
         "n_pptx": len(pptx_files),
+        "n_pdf": len(pdf_files),
+        "total_apontamentos": total_apontamentos,
         "consolidado": str(consolidated) if pptx_files else None,
+        "consolidado_kb": consolidado_kb,
         "zip": str(zip_path),
+        "zip_kb": zip_kb,
+        "data_referencia": hoje.strftime("%Y-%m-%d"),
     }
 
 
