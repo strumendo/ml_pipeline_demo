@@ -8,7 +8,7 @@
 
 ## 0. O que é este pipeline (em uma frase)
 
-Pipeline de **manutenção prescritiva** sobre equipamentos industriais (regressão: `dias_até_próxima_manutenção`), executado em **8 estágios sequenciais idempotentes** que se comunicam **por arquivos em `outputs/`** (não por objetos em memória), orquestrados por um `run_pipeline.py` que importa cada estágio como módulo, com **histórico versionado** por execução, **detecção automática de mudanças** nos dados de entrada e **relatório PDF final** com versão auto-incrementada.
+Pipeline de **manutenção prescritiva** sobre equipamentos industriais (regressão: `dias_até_próxima_manutenção`), executado em **10 estágios sequenciais idempotentes (s00–s09)** que se comunicam **por arquivos em `outputs/`** (não por objetos em memória), orquestrados por um `run_pipeline.py` que importa cada estágio como módulo, com **histórico versionado** por execução (artefatos não-ML registrados em `extras`), **detecção automática de mudanças** nos dados de entrada e **relatório PDF final** com versão auto-incrementada. Os estágios 6–9 são marcados `optional=True`.
 
 A receita abaixo é **agnóstica ao domínio**: troque "manutenção", "equipamento" e "dias até próxima manutenção" por qualquer outro contexto e a estrutura se mantém.
 
@@ -50,6 +50,8 @@ Um `dict` `PIPELINE_STEPS` em `run_pipeline.py` declara **ordem, título, descri
 
 ### 1.7 Histórico versionado por `run_id` único
 Cada execução recebe um `run_id = YYYYMMDD_HHMMSS` gerado **uma única vez** no orquestrador e propagado para `HistoryManager` **e** para o arquivo de log (`history/logs/run_<id>.log`). Isso casa logs, JSON estruturado e relatório textual da mesma execução. **Não gerar `run_id` dentro de cada estágio** — eles teriam timestamps diferentes.
+
+`HistoryManager.log_step` separa os campos do `results` retornado pelo estágio em dois buckets: `models` (entries `dict` com `mse`/`r2`) e `extras` (str/int/float/bool/list). Estágios não-ML (s07/s08/s09) usam `extras` para registrar contagens e paths de artefatos — sem isso esses campos seriam silenciosamente descartados.
 
 ### 1.8 Idempotência via hash MD5
 O `auto_pipeline.py` calcula `MD5(arquivo)` para todo input rastreado e persiste em `outputs/.data_state.json`. Pipeline só roda se algum hash mudou. Isso permite cron a cada 5 min sem custo. **Nunca editar o `.data_state.json` à mão** — usar `--reset` ou `--force`.
@@ -164,6 +166,17 @@ Esses dois estágios são o que transforma um pipeline preditivo em **prescritiv
   - `fator_*` clampeado em ranges conservadores (`[0.60, 1.20]` para desgaste, `[0.70, 1.30]` para consumo) — evita outliers em históricos curtos.
   - **Ociosidade soma direto à data prescrita** (máquina parada não desgasta). Negativos viram 0.
   - Output classificado em buckets de urgência (`ATRASADO`, `URGENTE` <30d, `ATENÇÃO` <90d, `OK`).
+
+### 3.8 Estágio 9 — Relatórios mensais por componente (MD + PPTX)
+Para cada equipamento, gera um relatório que combina produção, qualidade e a prescrição de s08. Saídas em dois diretórios separados:
+- `outputs/relatorios_mensais_componentes/EQ-*.md` + `INDEX.md`
+- `outputs/relatorios_mensais_componentes_ppt/EQ-*.pptx` + `Apresentacao_Consolidada.pptx` + `relatorio_mensal_por_componente.zip`
+
+PPTX em **7 slides**: capa → visão executiva → tendências → compostos (tabela + pie chart) → qualidade (KPIs + bar chart de refugo) → manutenção (tabela 3 colunas Campo/Valor/Efeito) → conclusões. Charts gerados via `matplotlib` em `tempfile.TemporaryDirectory()` por equipamento, embed como `add_picture`, tmpdir limpo após `prs.save()`.
+
+`_purge_legacy()` remove qualquer artefato antigo (prefixo `IJ-*` ou nome `Apresentação*`) antes de regerar — garante que renomeações de equipamentos não deixem órfãos. Os dois diretórios devem entrar no `.gitignore` (saídas regeradas a cada run).
+
+`results` retorna 11 campos não-ML (`n_md`, `n_pptx`, `total_apontamentos`, `zip_kb`, etc.) que vão para `history/runs/run_*.json` sob `extras` (ver §1.7).
 
 ---
 
